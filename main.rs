@@ -1,73 +1,93 @@
 /*
 Jon Bennett
-01/28/2024
 CISS 301
-Truth table and logical propostion.
+Lab3 02/10/2024
 */
+
+//Discription:
+//This program runs a Fibonacci Squence, Factorial, and digit of pi in a user friendly manner
+//on user input of a positive integer.  
+
+
 
 use std::io;
 
+// Section of code to do factorial
+fn factorial(num: u128) -> u128 {
+    match num {
+        0 | 1 => 1,
+        _ => factorial(num - 1) * num,
+    }
+}
+
+// Section of code to calculate the Fibonacci sequence
+fn fibonacci(n: u128, memo: &mut Vec<u128>) -> u128 {
+    if n <= 0 {
+        return n;
+    } else if n == 1 {
+        return 1;
+    }
+    if n as usize >= memo.len() {
+        memo.resize(n as usize + 1, 0);
+    }
+    if memo[n as usize] == 0 {
+        memo[n as usize] = fibonacci(n - 1, memo) + fibonacci(n - 2, memo);
+    }
+    memo[n as usize]
+}
+
+// Section of code that does the equation of (3/2)^(n-1)
+fn calculate_power(n: u128) -> f64 {
+    let base: f32 = 1.5;
+    let powerof = n - 1;
+    let result = base.powf(powerof as f32);
+    result.into()
+}
+
+// Calculating digits of pi
+fn pi_digit(n: u64) -> u64 {
+    let pi_string = format!("{:.1$}", std::f64::consts::PI, n as usize + 1);
+    let pi_char = pi_string.chars().nth(n as usize + 1).unwrap();
+    pi_char.to_digit(10).unwrap() as u64
+}
+
+//Main portion of the program that takes a positive integer from the user and allows them to run three set of information
+//at the sametime. That being the Fibonacci Sequence, The Factorial, and the digit of pi. While providing the limit information 
+//of the system to provide expected incounters to come within the program. 
 fn main() {
-/*This is the start of the loop.This provides instructions 
-and to have the user input only 0's and 1'. This Section 
-will also remove any spaces that user inputs.*/
-    loop{
-    let mut input: String = String::new();
-    let  _first_run = true; 
-    println!("Press enter again, and type 'yes' to exit other wise follow prompt below.");
-    println!("\n");
-    println!("Enter groups of up to four 0's or 1's separated by a comma: ");
-    io::stdin().read_line(&mut input).expect("Failed to read line");
-    let input = input.replace(" ", "");//Gets rid of spaces. 
-    println!("{}", input);
+    println!("Fibonacci generator\n");
+    println!("The limits of each section in order as they are read from left to right are:\n 12, 15, 35\nYou will not be able to go pass 35 :) enjoy");
+    println!("Type 'quit' to end the program");
+    let mut memo: Vec<u128> = vec![0, 1];
+    loop {
+        let mut input = String::new();
+        println!("\nEnter a positive integer:");
+        io::stdin().read_line(&mut input).expect("Failed to read line");
 
-/* This section Validate that the input contains only 0s and 1s 
-and is no more then 4 characters between the commas. 
-IF the user didn't foollow instructions this will kick back an error and have them redo their input.*/ 
-    if input
-        .split(',')
-        .map(|group| group.trim())
-        .all(|group| group.chars().all(|c| c == '0' || c == '1' || c ==',') && group.len() <= 4){
-        
-        let mut _output = String::new();
-
-/*This section of code decipher the input of the user and corrects 
-it to a logic propostion utilizing only ABCD.*/
-        for (idx, j) in input.trim().split(',').enumerate() {
-            if idx > 0 {
-                print!(" + ");
-            }
-            for i in 0..j.len() {
-                print!("{}", if j.as_bytes()[i] == b'0' { "/" } else { "" });
-                print!("{}", (i as u8 + b'A') as char);
-                }
-            }
-        println!("\n");
-
-
-/*This section of code will ask if they user wants to provide another
- input and will either loop back or exit the program.*/
-        loop{
-        println!("Do you want to exit? (yes/no)");
-        let mut exit_input = String::new();
-        io::stdin().read_line(&mut exit_input).expect("Failed to read line");
-
-        let exit_command = exit_input.trim().to_lowercase();
-        match exit_command.as_str(){
-            "yes" => {
-            println!("See you later!! Have a wonderful day :)");
-            return; // Exit the loop
+        if input.trim() == "quit" {
+            break;
         }
-        "no" =>break,
-        _ => println!("Sorry thats not a 'Yes' or 'No' lets try this again now."),
-        
-    }
-    }
-/*Print an error message if the input contains characters other 
-than 0 and 1 and if user didn't follow the provided instructions above.*/
-        } else { 
-        println!("Error: Input must contain only 0s and 1s and no more then 4 between each comma. You didn't do this, so Try again.");
-        println!("\n")
+
+        let n: u128 = match input.trim().parse() {
+            Ok(num) if num == 0 =>{
+                println!("Zero for all lets try to do something bigger then zero :)");
+                continue;
+            }
+            Ok(num) if num >=35 =>{
+                println!("You have reached the limit for all 3 sections, lets stay below 35 :)");
+                continue;
+            }
+            Ok(num) => num,
+            Err(_) => {
+                println!("Invalid input. Please enter a valid integer.");
+                continue;
+            }
+        };
+
+        for i in n..(n + 1) {
+            let fib_number = fibonacci(i, &mut memo);
+            let digits = pi_digit(n.try_into().unwrap());
+            println!("| If n = {} then (3/2)^(n-1) = {} | Factorial is: {} |The {}th digit of pi is {}",fib_number,calculate_power(fib_number),factorial(i),n,digits);
         }
     }
 }
