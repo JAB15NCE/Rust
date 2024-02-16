@@ -1,423 +1,203 @@
-/*
-Jon Bennett
-02/04/2024
-CISS 301 Lab 2
-
-Discription:
-This Rust program implements a logical deduction system. 
-Users can input premises, and the program applies various logical rules to derive new premises. 
-The deduction validity is checked, and a proof of the deduction is printed, including the rules applied at each step.
-The program uses enums and structs to represent logical laws and premise information, respectively.
-*/
-
-#[warn(non_snake_case)]
+use std::collections::HashSet;
 use std::io;
 
-// Enum to represent logical laws
-#[derive(Debug)]
-#[derive(Clone)]
-enum LogicalLaw {
-    ModusPonens,
-    ModusTollens,
-    LawOfSyllogism,
-    IdempotentLaw,
-    AssociativeLaw,
-    CommutativeLaw,
-    DistributiveLaw,
-    IdentityLawForConjunction,
-    IdentityLawForDisjunction,
-    ComplementLaw,
-    DeMorgansLaw,
-    AbsorptionLaw,
-    ImplicationElimination,
-}
-
-// Struct to represent information about a premise
-#[derive(Debug, Clone)]
-struct PremiseInfo {
-    premise: String,
-    law_used: Option<LogicalLaw>,
-}
-
-// Rule: Modus Ponens
-fn modus_ponens(premise1: &str, premise2: &str, deduction: &str) -> Option<PremiseInfo> {
-    if premise1.ends_with(deduction) && premise2 == &(premise1[..premise1.len() - deduction.len()]).to_string() {
-        Some(PremiseInfo {
-            premise: deduction.to_string(),
-            law_used: Some(LogicalLaw::ModusPonens),
-        })
-    } else {
-        None
-    }
-}
-
-// Rule: Modus Tollens
-fn modus_tollens(premise1: &str, premise2: &str, deduction: &str) -> Option<PremiseInfo> {
-    if premise1 == &(deduction.to_string() + "->" + premise2) {
-        Some(PremiseInfo {
-            premise: format!("~{}", premise1),
-            law_used: Some(LogicalLaw::ModusTollens),
-        })
-    } else {
-        None
-    }
-}
-
-// Rule: Law of Syllogism
-fn law_of_syllogism(premise1: &str, premise2: &str, deduction: &str) -> Option<PremiseInfo> {
-    if premise2.starts_with(premise1) && premise2.ends_with(deduction) {
-        Some(PremiseInfo {
-            premise: format!("{}->{}", premise1, deduction),
-            law_used: Some(LogicalLaw::LawOfSyllogism),
-        })
-    } else {
-        None
-    }
-}
-
-// Rule: Idempotent Law
-fn idempotent_law(premise1: &str, premise2: &str, _deduction: &str) -> Option<PremiseInfo> {
-    if premise1 == premise2 {
-        Some(PremiseInfo {
-            premise: premise1.to_string(),
-            law_used: Some(LogicalLaw::IdempotentLaw),
-        })
-    } else {
-        None
-    }
-}
-
-// Rule: Associative Law
-fn associative_law(premise1: &str, premise2: &str, deduction: &str) -> Option<PremiseInfo> {
-    if premise1.starts_with('(') && premise1.ends_with(')') && premise2.starts_with('(') && premise2.ends_with(')') {
-        let inner_premise1 = &premise1[1..premise1.len() - 1];
-        let inner_premise2 = &premise2[1..premise2.len() - 1];
-        if format!("({})({})", inner_premise1, inner_premise2) == deduction {
-            Some(PremiseInfo {
-                premise: deduction.to_string(),
-                law_used: Some(LogicalLaw::AssociativeLaw),
-            })
+fn table_input(label: &str) -> HashSet<String> {
+    println!("\nEnter each element on a new line. Type 'done' to be finished with that table.");
+    println!("once two of the tables are filled and only two then program will compare them.");
+    println!("\nEnter elements for Table set {} now", label);
+    let mut table = HashSet::new();
+    loop {
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).expect("Failed to read line");
+        let input = input.trim();
+        if input == "done" {
+            break;
+        }
+        if let Ok(num) = input.parse::<f64>() {
+            table.insert(num.to_string());
         } else {
-            None
-        }
-    } else {
-        None
-    }
-}
-
-// Rule: Commutative Law
-fn commutative_law(premise1: &str, premise2: &str, deduction: &str) -> Option<PremiseInfo> {
-    if premise1.starts_with('(') && premise1.ends_with('>') && premise2.starts_with('(') && premise2.ends_with('>') {
-        let inner_premise1 = &premise1[1..premise1.len() - 1];
-        let inner_premise2 = &premise2[1..premise2.len() - 1];
-        if format!("({})({})->{}", inner_premise2, inner_premise1, deduction) == deduction {
-            Some(PremiseInfo {
-                premise: deduction.to_string(),
-                law_used: Some(LogicalLaw::CommutativeLaw),
-            })
-        } else {
-            None
-        }
-    } else {
-        None
-    }
-}
-
-// Rule: Distributive Law
-fn distributive_law(premise1: &str, premise2: &str, deduction: &str) -> Option<PremiseInfo> {
-    if premise1.starts_with('(') && premise1.ends_with('>') && premise2.starts_with('(') && premise2.ends_with('>') && deduction.starts_with('(') && deduction.ends_with('>') {
-        let inner_premise1 = &premise1[1..premise1.len() - 1];
-        let inner_premise2 = &premise2[1..premise2.len() - 1];
-        let inner_deduction = &deduction[1..deduction.len() - 1];
-        if format!("({})({})->{}", inner_premise1, inner_premise2, inner_deduction) == deduction {
-            Some(PremiseInfo {
-                premise: deduction.to_string(),
-                law_used: Some(LogicalLaw::DistributiveLaw),
-            })
-        } else {
-            None
-        }
-    } else {
-        None
-    }
-}
-
-// Rule: Identity Law
-fn identity_law(premise1: &str, premise2: &str, deduction: &str) -> Option<PremiseInfo> {
-    if premise1 == premise2 {
-        // Identity Law for Conjunction (P ∧ P => P)
-        if premise1.ends_with('∧') && deduction == &premise1[..premise1.len() - 1] {
-            Some(PremiseInfo {
-                premise: deduction.to_string(),
-                law_used: Some(LogicalLaw::IdentityLawForConjunction),
-            })
-        }
-        // Identity Law for Disjunction (P ∨ P => P)
-        else if premise1.ends_with('∨') && deduction == &premise1[..premise1.len() - 1] {
-            Some(PremiseInfo {
-                premise: deduction.to_string(),
-                law_used: Some(LogicalLaw::IdentityLawForDisjunction),
-            })
-        }
-        // Add more cases for other logical operations if needed
-        else {
-            None
-        }
-    } else {
-        None
-    }
-}
-
-// Rule: Complement Law
-fn complement_law(premise1: &str, premise2: &str, deduction: &str) -> Option<PremiseInfo> {
-    if premise1 == format!("~{}", deduction) && premise2 == deduction {
-        Some(PremiseInfo {
-            premise: "None".to_string(),
-            law_used: Some(LogicalLaw::ComplementLaw),
-        })
-    } else {
-        None
-    }
-}
-
-// Rule: DeMorgan's Law
-fn demorgans_law(premise1: &str, premise2: &str, deduction: &str) -> Option<PremiseInfo> {
-    if premise1 == format!("~({}∧{})", deduction, deduction) && premise2 == format!("~{}∨~{}", deduction, deduction) {
-        Some(PremiseInfo {
-            premise: "None".to_string(),
-            law_used: Some(LogicalLaw::DeMorgansLaw),
-        })
-    } else {
-        None
-    }
-}
-
-// Rule: Absorption Law
-fn absorption_law(premise1: &str, premise2: &str, deduction: &str) -> Option<PremiseInfo> {
-    if premise1.starts_with('(') && premise1.ends_with('>') && premise2.starts_with('(') && premise2.ends_with('>') && deduction.starts_with('(') && deduction.ends_with('>') {
-        let inner_premise1 = &premise1[1..premise1.len() - 1];
-        let inner_premise2 = &premise2[1..premise2.len() - 1];
-        let inner_deduction = &deduction[1..deduction.len() - 1];
-        if inner_premise1 == format!("({}>{})->{}", inner_premise1, inner_premise2, inner_deduction) {
-            Some(PremiseInfo {
-                premise: format!("({}>{})->{}", inner_premise1, inner_premise2, inner_deduction),
-                law_used: Some(LogicalLaw::AbsorptionLaw),
-            })
-        } else if inner_premise1 == format!("({}>{})->{}", inner_premise1, inner_premise2, inner_deduction) {
-            Some(PremiseInfo {
-                premise: format!("({}>{})->{}", inner_premise1, inner_premise2, inner_deduction),
-                law_used: Some(LogicalLaw::AbsorptionLaw),
-            })
-        } else {
-            None
-        }
-    } else {
-        None
-    }
-}
-
-// Rule: Implication Elimination
-fn implication_elimination(premise1: &str, premise2: &str, deduction: &str) -> Option<PremiseInfo> {
-    if premise1.starts_with('(') && premise1.ends_with("->") && premise2 == &format!("{}{}", &premise1[1..premise1.len() - 1], deduction) {
-        let _inner_premise1 = &premise1[1..premise1.len() - 1];
-        Some(PremiseInfo {
-            premise: deduction.to_string(),
-            law_used: Some(LogicalLaw::ImplicationElimination),
-        })
-    } else {
-        None
-    }
-}
-
-// Function to substitute characters
-fn substitute_characters(input: &str) -> String {
-    input
-        .replace(">", "\u{2192}")
-        .replace("~", "\u{00AC}")
-        .replace("*", "\u{2227}")
-        .replace("+", "\u{2228}")
-        .replace("A", "\u{2200}")
-        .replace("E", "\u{2203}")
-        .replace("R", "\u{2234}")
-}
-
-// Function to print the proof (demonstration)
-fn print_proof(premises: &Vec<PremiseInfo>) {
-    println!("Proof:");
-
-    for premise_info in premises.iter().rev() {
-        let substituted_premise = substitute_characters(&premise_info.premise);
-        let rule_name = premise_info.law_used.clone().map(|law| match law {
-            LogicalLaw::ImplicationElimination => LogicalLaw::ModusPonens,
-            _ => law.clone(),
-        });
-        match &rule_name {
-            Some(law) => {
-                println!("Premise: {} - Using: {:?}", substituted_premise, law);
-            }
-            None => {
-                println!("Premise: {} - No law applied", substituted_premise);
-            }
+            println!("Invalid input. Please enter a valid real number or 'done' to finish.");
         }
     }
+    table
 }
 
-// Function to check the validity of a deduction
-fn check_deduction(premises: &Vec<PremiseInfo>, deduction: &str) -> Option<String> {
-    let new_premises = apply_rules(premises, deduction);
-
-    if new_premises.is_empty() {
-        Some("Insufficient information".to_string())
-    } else {
-        let last_premise = &new_premises[new_premises.len() - 1].premise;
-
-        if last_premise == deduction {
-            Some("Deduction is valid!".to_string())
-        } else if last_premise == &format!("~{}", deduction) {
-            Some("Deduction is invalid!".to_string())
-        } else {
-            None
-        }
-    }
+fn to_sort(table: &HashSet<String>) -> Vec<String> {
+    let mut nums: Vec<f64> = table.iter()
+        .filter_map(|s| s.parse().ok())
+        .collect();
+    nums.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    nums.iter().map(|&num| format!("{}", num as i64)).collect()
 }
 
-// Function to check the validity of a premise
-fn check_premise_validity(_premise: &str) -> Option<String> {
-    // Add more checks if needed
-    None
+fn right_join(_table_a: &HashSet<String>, table_b: &HashSet<String>) -> HashSet<String> {
+    table_b.clone()
 }
 
-// Function to apply rules and expand the list of known premises
-fn apply_rules(premises: &Vec<PremiseInfo>, deduction: &str) -> Vec<PremiseInfo> {
-    let mut new_premises: Vec<PremiseInfo> = Vec::new();
+fn left_join(table_a: &HashSet<String>, _table_b: &HashSet<String>) -> HashSet<String> {
+    table_a.clone()
+}
 
-    // Consider the last premise
-    let last_premise = &premises[premises.len() - 1].premise;
+fn outer_join(table_a: &HashSet<String>, table_b: &HashSet<String>) -> HashSet<String> {
+    let mut result = table_a.union(table_b).cloned().collect::<Vec<_>>();
+    result.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    result.into_iter().collect()
+}
 
-    // Iterate over known premises and apply rules
-    for known_premise_info in premises.iter().rev() {
-        let known_premise = &known_premise_info.premise;
+fn inner_join(table_a: &HashSet<String>, table_b: &HashSet<String>) -> HashSet<String> {
+    let mut result = table_a.intersection(table_b).cloned().collect::<Vec<_>>();
+    result.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    result.into_iter().collect()
+}
 
-        // Apply rules
-        if let Some(new_premise) = modus_ponens(known_premise, last_premise, deduction) {
-            new_premises.push(new_premise);
-        }
-        if let Some(new_premise) = modus_tollens(known_premise, last_premise, deduction) {
-            new_premises.push(new_premise);
-        }
-        if let Some(new_premise) = law_of_syllogism(known_premise, last_premise, deduction) {
-            new_premises.push(new_premise);
-        }
-        if let Some(new_premise) = idempotent_law(known_premise, last_premise, deduction) {
-            new_premises.push(new_premise);
-        }
-        if let Some(new_premise) = associative_law(known_premise, last_premise, deduction) {
-            new_premises.push(new_premise);
-        }
-        if let Some(new_premise) = commutative_law(known_premise, last_premise, deduction) {
-            new_premises.push(new_premise);
-        }
-        if let Some(new_premise) = distributive_law(known_premise, last_premise, deduction) {
-            new_premises.push(new_premise);
-        }
-        if let Some(new_premise) = identity_law(known_premise, last_premise, deduction) {
-            new_premises.push(new_premise);
-        }
-        if let Some(new_premise) = complement_law(known_premise, last_premise, deduction) {
-            new_premises.push(new_premise);
-        }
-        if let Some(new_premise) = demorgans_law(known_premise, last_premise, deduction) {
-            new_premises.push(new_premise);
-        }
-        if let Some(new_premise) = absorption_law(known_premise, last_premise, deduction) {
-            new_premises.push(new_premise);
-        }
-        if let Some(new_premise) = implication_elimination(known_premise, last_premise, deduction) {
-            new_premises.push(new_premise);
-        }
-        // Add more rules here as needed
-    }
+fn outer_diff(table_a: &HashSet<String>, table_b: &HashSet<String>) -> HashSet<String> {
+    let mut result = table_a.symmetric_difference(table_b).cloned().collect::<Vec<_>>();
+    result.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    result.into_iter().collect()
+}
 
-    new_premises
+fn right_diff(table_a: &HashSet<String>, table_b: &HashSet<String>) -> HashSet<String> {
+    let mut result = table_b.difference(table_a).cloned().collect::<Vec<_>>();
+    result.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    result.into_iter().collect()
+}
+
+fn left_diff(table_a: &HashSet<String>, table_b: &HashSet<String>) -> HashSet<String> {
+    let mut result = table_a.difference(table_b).cloned().collect::<Vec<_>>();
+    result.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    result.into_iter().collect()
 }
 
 fn main() {
-    let mut entered_premises: Vec<String> = Vec::new();
-    let mut known_premises: Vec<PremiseInfo> = Vec::new();
+   'main_loop: loop {
+        // Input table A
+        let table_a: HashSet<String> = table_input("A");
 
-    loop {
-        println!("Enter a premise (or type 'R' to finish):");
-        let input = {
+        // Input table B
+        let table_b: HashSet<String> = table_input("B");
+
+        // Input table C
+        let table_c: HashSet<String> = table_input("C");
+
+        // Check which tables are filled
+        let filled_tables = vec![!table_a.is_empty(), !table_b.is_empty(), !table_c.is_empty()];
+        let filled_count = filled_tables.iter().filter(|&&x| x).count();
+
+        // Compare tables as per the inputs
+        match filled_count {
+            0 => println!("Please enter elements for at least one table."),
+            1 => println!("Please enter elements for one more table."),
+            2 => {
+                // Inner join
+                if !table_a.is_empty() && !table_b.is_empty() {
+                    let inner_join = inner_join(&table_a, &table_b);
+                    println!("Inner Join ({} ∩ {}): {:?}", "A", "B", to_sort(&inner_join));
+                }
+                if !table_a.is_empty() && !table_c.is_empty() {
+                    let inner_join = inner_join(&table_a, &table_c);
+                    println!("Inner Join ({} ∩ {}): {:?}", "A", "C", to_sort(&inner_join));
+                }
+                if !table_b.is_empty() && !table_c.is_empty() {
+                    let inner_join = inner_join(&table_b, &table_c);
+                    println!("Inner Join ({} ∩ {}): {:?}", "B", "C", to_sort(&inner_join));
+                }
+                // Outer join
+                if !table_a.is_empty() && !table_b.is_empty() {
+                    let outer_join = outer_join(&table_a, &table_b);
+                    println!("Outer Join ({} ∪ {}): {:?}", "A", "B", to_sort(&outer_join));
+                }
+                if !table_a.is_empty() && !table_c.is_empty() {
+                    let outer_join = outer_join(&table_a, &table_c);
+                    println!("Outer Join ({} ∪ {}): {:?}", "A", "C", to_sort(&outer_join));
+                }
+                if !table_b.is_empty() && !table_c.is_empty() {
+                    let outer_join = outer_join(&table_b, &table_c);
+                    println!("Outer Join ({} ∪ {}): {:?}", "B", "C", to_sort(&outer_join));
+                }
+                // Left join
+                if !table_a.is_empty() && !table_b.is_empty() {
+                    let left_join = left_join(&table_a, &table_b);
+                    println!("Left Join ({}): {:?}", "A", to_sort(&left_join));
+                }
+                if !table_a.is_empty() && !table_c.is_empty() {
+                    let left_join = left_join(&table_a, &table_c);
+                    println!("Left Join ({}): {:?}", "A", to_sort(&left_join));
+                }
+                if !table_b.is_empty() && !table_c.is_empty() {
+                    let left_join = left_join(&table_b, &table_c);
+                    println!("Left Join ({}): {:?}", "B", to_sort(&left_join));
+                }
+                // Right join
+                if !table_a.is_empty() && !table_b.is_empty() {
+                    let right_join = right_join(&table_a, &table_b);
+                    println!("Right Join ({}): {:?}", "B", to_sort(&right_join));
+                }
+                if !table_a.is_empty() && !table_c.is_empty() {
+                    let right_join = right_join(&table_a, &table_c);
+                    println!("Right Join ({}): {:?}", "C", to_sort(&right_join));
+                }
+                if !table_b.is_empty() && !table_c.is_empty() {
+                    let right_join = right_join(&table_b, &table_c);
+                    println!("Right Join ({}): {:?}", "C", to_sort(&right_join));
+                }
+                // Outer difference (elements present in either table but not in both)
+                if !table_a.is_empty() && !table_b.is_empty() {
+                    let outer_diff = outer_diff(&table_a, &table_b);
+                    println!("Outer Difference ({} Δ {}): {:?}", "A", "B", to_sort(&outer_diff));
+                }
+                if !table_a.is_empty() && !table_c.is_empty() {
+                    let outer_diff = outer_diff(&table_a, &table_c);
+                    println!("Outer Difference ({} Δ {}): {:?}", "A", "C", to_sort(&outer_diff));
+                }
+                if !table_b.is_empty() && !table_c.is_empty() {
+                    let outer_diff = outer_diff(&table_b, &table_c);
+                    println!("Outer Difference ({} Δ {}): {:?}", "B", "C", to_sort(&outer_diff));
+                }
+                // Right difference (elements present in table B but not in table A)
+                if !table_a.is_empty() && !table_b.is_empty() {
+                    let right_diff = right_diff(&table_a, &table_b);
+                    println!("Right Difference ({} \\ {}): {:?}", "B", "A", to_sort(&right_diff));
+                }
+                if !table_a.is_empty() && !table_c.is_empty() {
+                    let right_diff = right_diff(&table_a, &table_c);
+                    println!("Right Difference ({} \\ {}): {:?}", "C", "A", to_sort(&right_diff));
+                }
+                if !table_b.is_empty() && !table_c.is_empty() {
+                    let right_diff = right_diff(&table_b, &table_c);
+                    println!("Right Difference ({} \\ {}): {:?}", "C", "B", to_sort(&right_diff));
+                }
+                // Left difference (elements present in table A but not in table B)
+                if !table_a.is_empty() && !table_b.is_empty() {
+                    let left_diff = left_diff(&table_a, &table_b);
+                    println!("Left Difference ({} \\ {}): {:?}", "A", "B", to_sort(&left_diff));
+                }
+                if !table_a.is_empty() && !table_c.is_empty() {
+                    let left_diff = left_diff(&table_a, &table_c);
+                    println!("Left Difference ({} \\ {}): {:?}", "A", "C", to_sort(&left_diff));
+                }
+                if !table_b.is_empty() && !table_c.is_empty() {
+                    let left_diff = left_diff(&table_b, &table_c);
+                    println!("Left Difference ({} \\ {}): {:?}", "B", "C", to_sort(&left_diff));
+                }
+            }
+            _ => println!("Only two tables at a time please."),
+        }
+
+        // Ask if the user wants to enter another set or exit
+        'input_loop: loop {
+            println!("Do you want to enter another set? (y/n)");
             let mut input = String::new();
             io::stdin().read_line(&mut input).expect("Failed to read line");
-            input.trim().to_string()
-        };
+            let input = input.trim().to_lowercase();
 
-        if input.to_uppercase() == "R" {
-            println!("Enter the deduction value:");
-            let deduction = {
-                let mut deduction = String::new();
-                io::stdin().read_line(&mut deduction).expect("Failed to read line");
-                deduction.trim().to_string()
-            };
-
-            for premise in entered_premises.iter() {
-                // Check validity of entered premise
-                match check_premise_validity(premise) {
-                    Some(message) => {
-                        println!("{}", message);
-                        return;
-                    }
-                    None => {}
-                }
-            }
-
-            let validity_message = check_deduction(&known_premises, &deduction);
-            match validity_message {
-                Some(message) => {
-                    println!("{}", message);
-                    print_proof(&known_premises);
-                    return;
-                }
-                None => {
-                    println!("Invalid deduction: Deduction must be '~{}'", deduction);
-                    continue;
+            match input.as_str() {
+                "y" => break 'input_loop, // Break out of the nested loop and continue to the next iteration
+                "n" => break 'main_loop, // Break out of the main loop and exit the program
+                _ => {
+                    println!("Try again please. \nPlease enter 'y' to continue or 'n' to exit.");
+                    continue; // Go back to the start of the nested loop to ask for input again
                 }
             }
         }
-
-        entered_premises.push(input.clone());
-
-        known_premises.push(PremiseInfo {
-            premise: substitute_characters(&input),
-            law_used: Some(LogicalLaw::ImplicationElimination), // Initial premise
-        });
-
-        let new_premises = apply_rules(&known_premises, "t");
-
-        if new_premises.is_empty() {
-            println!("Insufficient information");
-            continue;
-        }
-
-        for new_premise in &new_premises {
-            match &new_premise.law_used {
-                Some(law) => {
-                    println!("New Premise: {} - Using: {:?}", substitute_characters(&new_premise.premise), law);
-                }
-                None => {
-                    println!("New Premise: {} - No law applied", substitute_characters(&new_premise.premise));
-                }
-            }
-        }
-
-        known_premises.extend(new_premises);
-    
-
-    for (i, premise) in entered_premises.iter().enumerate() {
-        println!("Entered Premise {}: {}", i + 1, substitute_characters(premise));
     }
-
-    println!("Enter your next Premise");
-}
 }
